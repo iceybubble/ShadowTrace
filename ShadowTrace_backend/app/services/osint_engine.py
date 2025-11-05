@@ -1,9 +1,9 @@
 import time
 from app.utils.normalization import normalize
-from app.scribers.github import github
-from app.scribers.reddit import reddit
-from app.scribers.breach_check import breach
-from app.scribers.darkweb_feeds import darkweb
+from app.scrapers.github import github
+from app.scrapers.reddit import reddit
+from app.scrapers.breach_check import breach
+from app.scrapers.darkweb_feeds import darkweb
 from app.api.search import SCAN_CACHE
 from app.services.scoring import score
 from app.services.correlation import correlate

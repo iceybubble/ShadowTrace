@@ -1,74 +1,114 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
 body {
-  font-family: Arial;
-  background: #0d1117;
-  color: #c9d1d9;
+  background: #0a0f18;
+  color: #d8e1e8;
+}
+
+.navbar {
+  background: #0e1624;
+  padding: 15px 30px;
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid #1f2a38;
+}
+
+.logo {
+  font-size: 20px;
+  font-weight: bold;
+  color: #58a6ff;
 }
 
 .container {
-  max-width: 700px;
-  margin: 60px auto;
-  padding: 20px;
+  max-width: 900px;
+  margin: 40px auto;
+  padding: 0 15px;
 }
 
-h1 {
+.hero-box {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.hero-box h1 {
+  font-size: 28px;
   color: #58a6ff;
-  text-align: center;
+  font-weight: 600;
 }
 
-.subtitle {
-  text-align: center;
+.hero-box p {
+  color: #8b98a5;
   font-size: 14px;
-  color: #8b949e;
-  margin-bottom: 15px;
 }
 
-.input-box {
+.search-panel {
   display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
+  gap: 8px;
+  margin: 25px 0;
 }
 
-input, select, button {
+.input-field, .select-field {
+  padding: 12px;
+  background: #111a28;
+  border: 1px solid #223044;
+  color: #d8e1e8;
+  border-radius: 6px;
+  flex: 1;
+}
+
+.scan-btn {
+  padding: 12px;
+  background: #0074ff;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.scan-btn:hover {
+  background: #0b8bff;
+}
+
+.loading {
+  width: 120px;
+  margin: 0 auto;
   padding: 10px;
+  text-align: center;
+  color: #89c2ff;
   font-size: 14px;
 }
 
-input {
-  flex: 2;
-  border-radius: 5px;
-  border: 1px solid #30363d;
-  background: #161b22;
-  color: white;
+.hidden {
+  display: none;
 }
 
-select {
-  flex: 1;
-  border-radius: 5px;
-  background: #161b22;
-  border: 1px solid #30363d;
-  color: white;
+.results-section {
+  margin-top: 25px;
 }
 
-button {
-  background: #238636;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  flex: 1;
-  color: white;
-  font-weight: bold;
+.results-section h2 {
+  font-size: 18px;
+  margin-bottom: 10px;
+  color: #b7c4d1;
+  border-left: 3px solid #58a6ff;
+  padding-left: 10px;
 }
 
-button:hover {
-  background: #2ea043;
-}
-
-#status-box {
-  background: #161b22;
-  padding: 15px;
-  border-radius: 5px;
-  border: 1px solid #30363d;
-  min-height: 150px;
+.output-box {
+  background: #111a28;
+  padding: 18px;
+  border-radius: 6px;
+  border: 1px solid #223044;
+  min-height: 280px;
+  font-size: 13px;
+  line-height: 1.5;
   white-space: pre-wrap;
   overflow-y: auto;
 }

@@ -7,24 +7,40 @@
 </head>
 <body>
 
-  <div class="container">
+<div class="navbar">
+  <div class="logo">ShadowTrace</div>
+  <div class="nav-right">OSINT & Threat Intelligence Dashboard</div>
+</div>
+
+<div class="container">
+
+  <div class="hero-box">
     <h1>ShadowTrace OSINT Engine</h1>
-    <p class="subtitle">Automated Recon & Threat Intelligence</p>
-
-    <div class="input-box">
-      <input id="query" placeholder="Enter domain/IP e.g. google.com or 8.8.8.8" />
-      <select id="source">
-        <option value="generic">Generic</option>
-        <option value="whois">WHOIS</option>
-        <option value="shodan">Shodan</option>
-      </select>
-      <button id="start">Start Scan</button>
-    </div>
-
-    <h3>Status</h3>
-    <pre id="status-box">No scan started...</pre>
+    <p>Real-Time Recon and Threat Profiling</p>
   </div>
 
-  <script src="./js/app.js"></script>
+  <div class="search-panel">
+    <input id="query" class="input-field" placeholder="Enter domain, IP, email, username or phone">
+    <select id="source" class="select-field">
+      <option value="auto">Auto Detect</option>
+      <option value="domain">Domain</option>
+      <option value="ip">IP Address</option>
+      <option value="email">Email</option>
+      <option value="username">Username</option>
+      <option value="phone">Phone</option>
+    </select>
+    <button id="start" class="scan-btn">Start Scan</button>
+  </div>
+
+  <div id="loading" class="loading hidden">Scanning...</div>
+
+  <div class="results-section">
+    <h2>Scan Output</h2>
+    <pre id="status-box" class="output-box">Awaiting input...</pre>
+  </div>
+
+</div>
+
+<script src="./js/app.js"></script>
 </body>
 </html>

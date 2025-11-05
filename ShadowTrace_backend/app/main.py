@@ -16,6 +16,7 @@ db = client["shadowtrace"]
 from app.api.search import router as search_router
 from app.api.alerts import router as alerts_router
 from app.api.history import router as history_router
+from app.api.utils import router as utils_router
 
 app = FastAPI(
     title="ShadowTrace OSINT Engine",
@@ -35,6 +36,7 @@ app.add_middleware(
 app.include_router(search_router)
 app.include_router(alerts_router)
 app.include_router(history_router)
+app.include_router(utils_router)
 
 @app.get("/")
 async def root():
@@ -47,7 +49,8 @@ async def root():
             "get_scan": "/search/status/{query_id}",
             "run_scan": "/search/run/{query_id}",
             "alerts": "/alerts/",
-            "history": "/history/"
+            "history": "/history/",
+            "utils": "/utils/test-keys"
         }
     }
 

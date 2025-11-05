@@ -1,14 +1,16 @@
-const API_BASE = "http://127.0.0.1:8000"; 
+const API_BASE = "http://127.0.0.1:8000";
 
 const statusBox = document.getElementById("status-box");
 const startBtn = document.getElementById("start");
+const loading = document.getElementById("loading");
 
 function show(msg) {
   statusBox.textContent = msg;
 }
 
 async function pollStatus(id) {
-  show("Scan started...");
+  loading.classList.remove("hidden");
+  show("Running scan...");
 
   const interval = 2000;
 
@@ -17,7 +19,10 @@ async function pollStatus(id) {
     const data = await res.json();
     show(JSON.stringify(data, null, 2));
 
-    if (data.status === "done" || data.status === "failed") break;
+    if (data.status === "done" || data.status === "failed") {
+      loading.classList.add("hidden");
+      break;
+    }
 
     await new Promise(r => setTimeout(r, interval));
   }
@@ -27,8 +32,9 @@ startBtn.addEventListener("click", async () => {
   const query = document.getElementById("query").value;
   const source = document.getElementById("source").value;
 
-  if (!query) return alert("Enter a query!");
+  if (!query) return alert("Enter a query");
 
+  loading.classList.remove("hidden");
   show("Submitting scan request...");
 
   const res = await fetch(`${API_BASE}/search/start`, {
@@ -39,6 +45,5 @@ startBtn.addEventListener("click", async () => {
 
   const data = await res.json();
   show("Scan queued:\n" + JSON.stringify(data, null, 2));
-
   pollStatus(data.id);
 });

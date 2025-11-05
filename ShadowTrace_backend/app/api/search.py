@@ -1,182 +1,282 @@
-# app/api/search.py
 from fastapi import APIRouter, HTTPException, Body, BackgroundTasks
 from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
 from bson import ObjectId
-import whois
-import os
-import shodan
-import traceback
+import os, re, requests, socket, traceback, whois, shodan, dns.resolver
+from ipwhois import IPWhois
 
-# import db from app.main
 from app.main import db
 
 router = APIRouter(prefix="/search", tags=["search"])
 
 class SearchRequest(BaseModel):
-    query: str = Field(..., example="example.com")
-    source: Optional[str] = Field("generic", example="whois")   # whois, shodan, generic
+    query: str = Field(..., example="example.com or john_doe or +918*********")
+    source: Optional[str] = Field("auto", example="auto")
     meta: Optional[dict] = None
 
-# helper
-def oid_str(oid):
-    return str(oid)
 
-def run_whois(query: str):
-    """Run WHOIS and return a serializable dict."""
+############################################
+# Entity Detection
+############################################
+
+IPV4 = re.compile(r"^\s*(?:\d{1,3}\.){3}\d{1,3}\s*$")
+DOMAIN = re.compile(r"^(?!-)(?:[a-zA-Z0-9-]{1,63}\.)+[a-zA-Z]{2,63}$")
+EMAIL = re.compile(r"^[^@]+@[^@]+\.[^@]+$")
+PHONE = re.compile(r"^\+?\d[\d\s\-()]{5,}$")
+USERNAME = re.compile(r"^[a-zA-Z0-9_.-]{3,}$")
+
+def detect_entity(q):
+    q = q.strip()
+    if IPV4.match(q):
+        parts = list(map(int, q.split(".")))
+        if (parts[0]==10) or (parts[0]==172 and 16<=parts[1]<=31) or (parts[0]==192 and parts[1]==168):
+            return "private_ip"
+        return "ip"
+    if EMAIL.match(q): return "email"
+    if DOMAIN.match(q): return "domain"
+    if PHONE.match(q): return "phone"
+    if USERNAME.match(q): return "username"
+    return "unknown"
+
+
+############################################
+# Helper Functions
+############################################
+
+def safe_dns(name, rec="A"):
     try:
-        w = whois.whois(query)
-        # whois.whois returns objects with attributes that may not be JSON serializable.
-        result = {}
-        for k, v in w.items():
-            try:
-                # convert sets/lists to lists and other objects to string
-                if isinstance(v, (list, set, tuple)):
-                    result[k] = list(v)
-                else:
-                    result[k] = str(v)
-            except Exception:
-                result[k] = repr(v)
-        return {"ok": True, "whois": result}
+        ans = dns.resolver.resolve(name, rec, lifetime=5)
+        return [i.to_text() for i in ans]
     except Exception as e:
-        return {"ok": False, "error": f"whois error: {str(e)}"}
+        return {"error": str(e)}
 
-def run_shodan(query: str):
-    """Run a simple Shodan host lookup if key exists. Query can be IP or host."""
-    key = os.getenv("SHODAN_API_KEY") or ""
+def whois_domain(domain):
+    try:
+        w = whois.whois(domain)
+        return {"ok": True, "data": {k:(list(v) if isinstance(v,(list,set,tuple)) else str(v)) for k,v in w.items()}}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+def ip_rir(ip):
+    try:
+        return {"ok": True, "rir": IPWhois(ip).lookup_rdap(depth=1)}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+def http_head(target):
+    try:
+        r = requests.head(f"http://{target}", timeout=5, allow_redirects=True)
+        return {"status": r.status_code, "headers": dict(r.headers)}
+    except Exception as e:
+        return {"error": str(e)}
+
+def email_gravatar(email):
+    import hashlib
+    h = hashlib.md5(email.strip().lower().encode()).hexdigest()
+    url = f"https://www.gravatar.com/avatar/{h}?d=404"
+    try:
+        r = requests.head(url, timeout=5)
+        return {"exists": r.status_code == 200, "url": url}
+    except Exception as e:
+        return {"error": str(e)}
+
+def shodan_search(q):
+    key = os.getenv("SHODAN_API_KEY","")
     if not key:
-        return {"ok": False, "error": "no_shodan_key"}
+        return {"ok": False, "error": "Shodan key missing"}
     try:
-        sh = shodan.Shodan(key)
-        # try host lookup first (works for IP)
+        s = shodan.Shodan(key)
         try:
-            info = sh.host(query)
-            # simplify result
-            return {"ok": True, "shodan": {"ip_str": info.get("ip_str"), "ports": info.get("ports"), "data": info.get("data")[:5] if info.get("data") else []}}
-        except shodan.exception.APIError:
-            # fallback: search using query as term
-            res = sh.search(query, limit=5)
-            return {"ok": True, "shodan_search": {"total": res.get("total"), "matches": res.get("matches")[:5]}}
+            info = s.host(q)
+            return {"ok": True, "host": info}
+        except:
+            r = s.search(q, limit=5)
+            return {"ok": True, "matches": r.get("matches")}
     except Exception as e:
-        return {"ok": False, "error": f"shodan error: {str(e)}"}
+        return {"ok": False, "error": str(e)}
 
-def worker_run_search(doc_id):
-    """
-    Background worker that loads the search document, runs integrations,
-    and writes results back to the DB.
-    """
+def social_probe(username):
+    socials = {
+        "github": f"https://github.com/{username}",
+        "twitter": f"https://twitter.com/{username}",
+        "reddit": f"https://www.reddit.com/user/{username}",
+        "instagram": f"https://www.instagram.com/{username}"
+    }
+    out = {}
+    for site,url in socials.items():
+        try:
+            r = requests.head(url, timeout=5, allow_redirects=True)
+            out[site] = {"exists": r.status_code == 200, "status": r.status_code, "url": url}
+        except Exception as e:
+            out[site] = {"error": str(e)}
+    return out
+
+
+############################################
+# VirusTotal & AbuseIPDB
+############################################
+
+VT_KEY = os.getenv("VT_API_KEY","")
+ABUSE_KEY = os.getenv("ABUSEIPDB_KEY","")
+
+def vt_ip_lookup(ip):
+    if not VT_KEY:
+        return {"ok": False, "error": "VT key missing"}
     try:
-        oid = ObjectId(doc_id)
+        r = requests.get(f"https://www.virustotal.com/api/v3/ip_addresses/{ip}",
+                         headers={"x-apikey": VT_KEY}, timeout=8)
+        return {"ok": r.ok, "data": r.json() if r.ok else r.text}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+def vt_domain_lookup(domain):
+    if not VT_KEY:
+        return {"ok": False, "error": "VT key missing"}
+    try:
+        r = requests.get(f"https://www.virustotal.com/api/v3/domains/{domain}",
+                         headers={"x-apikey": VT_KEY}, timeout=8)
+        return {"ok": r.ok, "data": r.json() if r.ok else r.text}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+def abuseipdb_check(ip):
+    if not ABUSE_KEY:
+        return {"ok": False, "error": "AbuseIPDB key missing"}
+    try:
+        r = requests.get("https://api.abuseipdb.com/api/v2/check",
+                         params={"ipAddress": ip, "maxAgeInDays": 90},
+                         headers={"Key": ABUSE_KEY, "Accept": "application/json"}, timeout=8)
+        return {"ok": r.ok, "data": r.json().get("data") if r.ok else r.text}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+############################################
+# Background Scan Worker
+############################################
+
+def run_scan(id):
+    try:
+        oid = ObjectId(id)
         doc = db.search_logs.find_one({"_id": oid})
         if not doc:
             return
 
-        db.search_logs.update_one({"_id": oid}, {"$set": {"status": "running", "updated_at": datetime.utcnow()}})
+        q = doc["query"].strip()
+        etype = detect_entity(q)
 
-        query = doc.get("query")
-        source = doc.get("source", "generic")
+        db.search_logs.update_one({"_id": oid}, {"$set": {"status": "running"}})
 
-        results = {"meta": {"query": query, "source": source, "started_at": datetime.utcnow().isoformat()}}
+        res = {"meta": {"query": q, "entity": etype, "time": str(datetime.utcnow())}}
 
-        # WHOIS (for domains)
-        try:
-            whois_res = run_whois(query)
-            results["whois"] = whois_res
-        except Exception as e:
-            results["whois"] = {"ok": False, "error": str(e)}
+        if etype == "ip":
+            res["ip_rir"] = ip_rir(q)
+            res["shodan"] = shodan_search(q)
+            res["http"] = http_head(q)
 
-        # SHODAN (try, only if api key exists)
-        try:
-            shodan_res = run_shodan(query)
-            results["shodan"] = shodan_res
-        except Exception as e:
-            results["shodan"] = {"ok": False, "error": str(e)}
+            res["vt"] = vt_ip_lookup(q)
+            res["abuseipdb"] = abuseipdb_check(q)
 
-        # Add placeholder for other integrations later (VirusTotal, crt.sh, passive DNS)
-        results["notes"] = "Add VirusTotal / passive DNS / crt.sh later."
+            try:
+                vt_score = res["vt"]["data"]["data"]["attributes"]["last_analysis_stats"]["malicious"]
+            except:
+                vt_score = 0
+
+            try:
+                abuse_score = res["abuseipdb"]["data"]["abuseConfidenceScore"]
+            except:
+                abuse_score = 0
+
+            level = "low"
+            if vt_score >= 3 or abuse_score >= 30:
+                level = "medium"
+            if vt_score >= 10 or abuse_score >= 75:
+                level = "high"
+
+            res["threat_score"] = {
+                "vt_malicious": vt_score,
+                "abuse_confidence": abuse_score,
+                "risk_level": level
+            }
+
+        elif etype == "private_ip":
+            res["note"] = "Private IP; requires internal network scan"
+
+        elif etype == "domain":
+            res["whois"] = whois_domain(q)
+            res["A"] = safe_dns(q, "A")
+            res["MX"] = safe_dns(q, "MX")
+            res["http"] = http_head(q)
+            res["shodan"] = shodan_search(q)
+            try:
+                res["crtsh"] = requests.get(
+                    f"https://crt.sh/?q=%25.{q}&output=json", timeout=7
+                ).json()[:5]
+            except:
+                res["crtsh"] = "N/A"
+
+            res["vt"] = vt_domain_lookup(q)
+
+        elif etype == "email":
+            domain = q.split("@")[-1]
+            res["MX"] = safe_dns(domain,"MX")
+            res["gravatar"] = email_gravatar(q)
+
+        elif etype == "phone":
+            res["note"] = "Phone OSINT requires external paid data source"
+
+        elif etype == "username":
+            res["social"] = social_probe(q)
+
+        else:
+            res["note"] = "Unknown input. Try domain/ip/email/username/phone."
 
         db.search_logs.update_one(
             {"_id": oid},
-            {"$set": {"status": "done", "results": results, "updated_at": datetime.utcnow()}}
+            {"$set": {"status": "done", "results": res, "updated_at": datetime.utcnow()}}
         )
+
     except Exception:
-        # write error traceback into doc
-        try:
-            tb = traceback.format_exc()
-            db.search_logs.update_one(
-                {"_id": ObjectId(doc_id)},
-                {"$set": {"status": "failed", "error": tb, "updated_at": datetime.utcnow()}}
-            )
-        except Exception:
-            pass
+        tb = traceback.format_exc()
+        db.search_logs.update_one({"_id": ObjectId(id)}, {"$set":{"status":"failed","error":tb}})
+
+
+############################################
+# API Endpoints
+############################################
 
 @router.post("/start")
-async def start_search(payload: SearchRequest = Body(...), background: BackgroundTasks = None):
-    """
-    Start a search: insert DB doc and queue BackgroundTasks to run integrations.
-    """
+async def start_scan(req: SearchRequest, bg: BackgroundTasks):
     doc = {
-        "query": payload.query,
-        "source": payload.source,
-        "meta": payload.meta or {},
+        "query": req.query,
+        "source": req.source,
+        "meta": req.meta,
         "status": "queued",
         "results": None,
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow(),
     }
-    res = db.search_logs.insert_one(doc)
-    if not res.inserted_id:
-        raise HTTPException(status_code=500, detail="failed to create search record")
+    id = str(db.search_logs.insert_one(doc).inserted_id)
+    bg.add_task(run_scan, id)
+    return {"id": id, "status": "queued", "query": req.query}
 
-    doc_id = oid_str(res.inserted_id)
-    # queue background worker
-    if background is not None:
-        background.add_task(worker_run_search, doc_id)
-    else:
-        # fallback: run inline (not recommended)
-        worker_run_search(doc_id)
-
-    return {"id": doc_id, "status": "queued", "query": payload.query, "created_at": doc["created_at"]}
-
-@router.get("/status/{search_id}")
-async def get_search_status(search_id: str):
+@router.get("/status/{id}")
+async def status(id):
     try:
-        oid = ObjectId(search_id)
-    except Exception:
-        raise HTTPException(status_code=400, detail="invalid search id")
+        oid = ObjectId(id)
+    except:
+        raise HTTPException(status_code=400, detail="invalid id")
 
-    doc = db.search_logs.find_one({"_id": oid})
-    if not doc:
-        raise HTTPException(status_code=404, detail="search not found")
+    d = db.search_logs.find_one({"_id": oid})
+    if not d:
+        raise HTTPException(status_code=404, detail="not found")
 
-    doc["id"] = oid_str(doc["_id"])
-    doc.pop("_id", None)
-    # convert datetimes to isoformat
-    for k in ("created_at", "updated_at"):
-        if k in doc and hasattr(doc[k], "isoformat"):
-            doc[k] = doc[k].isoformat()
-    return doc
+    d["id"] = id
+    d.pop("_id")
+    return d
 
-@router.post("/run/{search_id}")
-async def run_search_now(search_id: str):
-    """
-    Run synchronously (blocking) — useful for debugging, not for production.
-    """
-    try:
-        oid = ObjectId(search_id)
-    except Exception:
-        raise HTTPException(status_code=400, detail="invalid search id")
-    doc = db.search_logs.find_one({"_id": oid})
-    if not doc:
-        raise HTTPException(status_code=404, detail="search not found")
-
-    # run worker directly
-    worker_run_search(search_id)
-    doc = db.search_logs.find_one({"_id": oid})
-    doc["id"] = oid_str(doc["_id"])
-    doc.pop("_id", None)
-    for k in ("created_at", "updated_at"):
-        if k in doc and hasattr(doc[k], "isoformat"):
-            doc[k] = doc[k].isoformat()
-    return doc
+@router.post("/run/{id}")
+async def run_now(id: str):
+    run_scan(id)
+    return await status(id)

@@ -1,11 +1,8 @@
 from pymongo import MongoClient
-from app.config import settings
+import os
 
-client = MongoClient(settings.MONGO_URI)
-db = client[settings.MONGO_DB]
+MONGO_URI = os.getenv("MONGO_URI")
 
-queries = db["queries"]
-raw_intel = db["raw_intel"]
-entities = db["entities"]
-connections = db["connections"]
-alerts = db["alerts"]
+client = MongoClient(MONGO_URI)
+db = client["shadowtrace"]
+scans_collection = db["scans"]

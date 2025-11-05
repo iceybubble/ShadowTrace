@@ -1,0 +1,17 @@
+body {
+    font-family: "Segoe UI", sans-serif;
+}
+.card {
+    border-radius: 10px;
+}
+.badge-score {
+    font-size: 1rem;
+    padding: 6px 10px;
+    font-weight: bold;
+}
+.source-box {
+    background: #333;
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 6px;
+}

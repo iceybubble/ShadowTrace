@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+httpx
+beautifulsoup4
+python-dotenv
+pymongo
+elasticsearch
+rapidfuzz
+networkx
+weasyprint
+Jinja2

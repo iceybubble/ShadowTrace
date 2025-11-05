@@ -1,68 +1,44 @@
-const API_URL = "http://127.0.0.1:8000";
+const API_BASE = "http://127.0.0.1:8000"; 
 
-async function startScan() {
-    const val = document.getElementById("inputValue").value;
-    if (!val) {
-        alert("Enter a value first");
-        return;
-    }
+const statusBox = document.getElementById("status-box");
+const startBtn = document.getElementById("start");
 
-    document.getElementById("status").innerText = "🚀 Starting scan...";
+function show(msg) {
+  statusBox.textContent = msg;
+}
 
-    const res = await fetch(`${API_URL}/scan/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json"},
-        body: JSON.stringify({ input_value: val })
-    });
+async function pollStatus(id) {
+  show("Scan started...");
 
+  const interval = 2000;
+
+  while (true) {
+    const res = await fetch(`${API_BASE}/search/status/${id}`);
     const data = await res.json();
-    const qid = data.query_id;
+    show(JSON.stringify(data, null, 2));
 
-    document.getElementById("status").innerText =
-        `📡 Scan started. Tracking ID: ${qid}`;
+    if (data.status === "done" || data.status === "failed") break;
 
-    pollScan(qid);
+    await new Promise(r => setTimeout(r, interval));
+  }
 }
 
-async function pollScan(qid) {
-    const interval = setInterval(async () => {
-        const res = await fetch(`${API_URL}/scan/${qid}`);
-        const data = await res.json();
+startBtn.addEventListener("click", async () => {
+  const query = document.getElementById("query").value;
+  const source = document.getElementById("source").value;
 
-        if (!data.status || data.status !== "scanning") {
-            clearInterval(interval);
-            showResult(data);
-        }
-    }, 1000);
-}
+  if (!query) return alert("Enter a query!");
 
-function showResult(data) {
-    document.getElementById("status").innerText = "✅ Scan complete";
+  show("Submitting scan request...");
 
-    let html = `
-        <div class="card p-3">
-            <h5 class="fw-bold">Threat Actor Profile</h5>
-            <p><b>Indicator:</b> ${data.indicator}</p>
-            <p><b>Type:</b> ${data.type}</p>
-            <p><b>Confidence:</b> 
-                <span class="badge bg-${data.confidence > 70 ? 'danger' : data.confidence > 40 ? 'warning' : 'secondary'} badge-score">
-                ${data.confidence}%
-                </span>
-            </p>
-            <hr>
-            <h6>Evidence Sources</h6>
-    `;
+  const res = await fetch(`${API_BASE}/search/start`, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({query, source})
+  });
 
-    (data.sources || []).forEach(src => {
-        html += `
-            <div class="source-box">
-                <b>${src.type || "Source"}:</b> ${src.title || "No title"}
-                <br>
-                <a href="${src.url || "#"}" target="_blank" class="text-info">view</a>
-            </div>`;
-    });
+  const data = await res.json();
+  show("Scan queued:\n" + JSON.stringify(data, null, 2));
 
-    html += `</div>`;
-
-    document.getElementById("result").innerHTML = html;
-}
+  pollStatus(data.id);
+});

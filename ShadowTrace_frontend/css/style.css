@@ -1,17 +1,74 @@
 body {
-    font-family: "Segoe UI", sans-serif;
+  font-family: Arial;
+  background: #0d1117;
+  color: #c9d1d9;
 }
-.card {
-    border-radius: 10px;
+
+.container {
+  max-width: 700px;
+  margin: 60px auto;
+  padding: 20px;
 }
-.badge-score {
-    font-size: 1rem;
-    padding: 6px 10px;
-    font-weight: bold;
+
+h1 {
+  color: #58a6ff;
+  text-align: center;
 }
-.source-box {
-    background: #333;
-    padding: 10px;
-    border-radius: 6px;
-    margin-bottom: 6px;
+
+.subtitle {
+  text-align: center;
+  font-size: 14px;
+  color: #8b949e;
+  margin-bottom: 15px;
+}
+
+.input-box {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+input, select, button {
+  padding: 10px;
+  font-size: 14px;
+}
+
+input {
+  flex: 2;
+  border-radius: 5px;
+  border: 1px solid #30363d;
+  background: #161b22;
+  color: white;
+}
+
+select {
+  flex: 1;
+  border-radius: 5px;
+  background: #161b22;
+  border: 1px solid #30363d;
+  color: white;
+}
+
+button {
+  background: #238636;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  flex: 1;
+  color: white;
+  font-weight: bold;
+}
+
+button:hover {
+  background: #2ea043;
+}
+
+#status-box {
+  background: #161b22;
+  padding: 15px;
+  border-radius: 5px;
+  border: 1px solid #30363d;
+  min-height: 150px;
+  white-space: pre-wrap;
+  overflow-y: auto;
 }

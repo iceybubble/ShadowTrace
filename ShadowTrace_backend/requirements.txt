@@ -9,3 +9,9 @@ rapidfuzz
 networkx
 weasyprint
 Jinja2
+python-whois
+shodan
+python-dotenv
+pymongo
+fastapi
+uvicorn

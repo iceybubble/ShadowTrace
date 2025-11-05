@@ -20,7 +20,7 @@
   </div>
 
   <div class="search-panel">
-    <input id="query" class="input-field" placeholder="Enter domain, IP, email, username or phone">
+    <input id="query" class="input-field" placeholder="Enter domain, IP, email, username or phone" />
     <select id="source" class="select-field">
       <option value="auto">Auto Detect</option>
       <option value="domain">Domain</option>
@@ -33,6 +33,18 @@
   </div>
 
   <div id="loading" class="loading hidden">Scanning...</div>
+
+  <!-- Summary + Cards section -->
+  <div id="summary-section" class="summary hidden">
+    <h2>Threat Summary</h2>
+    <div class="badge" id="threat-badge">-</div>
+
+    <div class="cards">
+      <div class="card" id="vt-card">VirusTotal</div>
+      <div class="card" id="abuse-card">AbuseIPDB</div>
+      <div class="card" id="shodan-card">Shodan</div>
+    </div>
+  </div>
 
   <div class="results-section">
     <h2>Scan Output</h2>

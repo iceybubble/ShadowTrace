@@ -89,6 +89,63 @@ body {
   display: none;
 }
 
+/* Summary and result card styling */
+
+.summary {
+  margin-top: 25px;
+  padding: 15px;
+  background: #101722;
+  border: 1px solid #1f2a38;
+  border-radius: 6px;
+}
+
+.summary h2 {
+  font-size: 18px;
+  margin-bottom: 10px;
+  color: #b7c4d1;
+  border-left: 3px solid #58a6ff;
+  padding-left: 10px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 6px 12px;
+  font-size: 14px;
+  font-weight: bold;
+  border-radius: 4px;
+  margin-bottom: 12px;
+  color: white;
+}
+
+/* Threat level colors */
+.badge.low { background: #2b8a3e; }
+.badge.medium { background: #c27b00; }
+.badge.high { background: #b12b2b; }
+
+.cards {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.card {
+  flex: 1;
+  background: #0e1624;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #223044;
+  font-size: 13px;
+  color: #d8e1e8;
+  white-space: pre-line;
+}
+
+.card-title {
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+/* Raw result box */
+
 .results-section {
   margin-top: 25px;
 }

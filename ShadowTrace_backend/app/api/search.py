@@ -114,11 +114,12 @@ def social_probe(username):
 
 
 ############################################
-# VirusTotal & AbuseIPDB
+# VirusTotal, AbuseIPDB, and HIBP
 ############################################
 
 VT_KEY = os.getenv("VT_API_KEY","")
 ABUSE_KEY = os.getenv("ABUSEIPDB_KEY","")
+HIBP_KEY = os.getenv("HIBP_API_KEY","00000000000000000000000000000000")
 
 def vt_ip_lookup(ip):
     if not VT_KEY:
@@ -151,6 +152,25 @@ def abuseipdb_check(ip):
     except Exception as e:
         return {"ok": False, "error": str(e)}
 
+def hibp_check(email):
+    """Checks if an email appears in HIBP breaches (test key supported)."""
+    try:
+        encoded = requests.utils.quote(email)
+        url = f"https://haveibeenpwned.com/api/v3/breachedaccount/{encoded}?truncateResponse=false"
+        headers = {
+            "hibp-api-key": HIBP_KEY,
+            "User-Agent": "ShadowTrace OSINT Engine"
+        }
+        r = requests.get(url, headers=headers, timeout=8)
+        if r.status_code == 200:
+            return {"ok": True, "data": r.json()}
+        elif r.status_code == 404:
+            return {"ok": False, "message": "No breaches found"}
+        else:
+            return {"ok": False, "status": r.status_code, "error": r.text}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
 
 ############################################
 # Background Scan Worker
@@ -174,7 +194,6 @@ def run_scan(id):
             res["ip_rir"] = ip_rir(q)
             res["shodan"] = shodan_search(q)
             res["http"] = http_head(q)
-
             res["vt"] = vt_ip_lookup(q)
             res["abuseipdb"] = abuseipdb_check(q)
 
@@ -220,8 +239,9 @@ def run_scan(id):
 
         elif etype == "email":
             domain = q.split("@")[-1]
-            res["MX"] = safe_dns(domain,"MX")
+            res["MX"] = safe_dns(domain, "MX")
             res["gravatar"] = email_gravatar(q)
+            res["hibp"] = hibp_check(q)  # ✅ Integrated HIBP lookup here
 
         elif etype == "phone":
             res["note"] = "Phone OSINT requires external paid data source"
@@ -239,7 +259,7 @@ def run_scan(id):
 
     except Exception:
         tb = traceback.format_exc()
-        db.search_logs.update_one({"_id": ObjectId(id)}, {"$set":{"status":"failed","error":tb}})
+        db.search_logs.update_one({"_id": ObjectId(id)}, {"$set": {"status": "failed", "error": tb}})
 
 
 ############################################

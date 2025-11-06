@@ -8,6 +8,7 @@
 body {
   background: #0a0f18;
   color: #d8e1e8;
+  overflow-y: scroll;
 }
 
 .navbar {
@@ -25,7 +26,7 @@ body {
 }
 
 .container {
-  max-width: 900px;
+  max-width: 1000px;
   margin: 40px auto;
   padding: 0 15px;
 }
@@ -46,13 +47,17 @@ body {
   font-size: 14px;
 }
 
+/* ===========================
+   Search Panel
+=========================== */
 .search-panel {
   display: flex;
   gap: 8px;
   margin: 25px 0;
 }
 
-.input-field, .select-field {
+.input-field,
+.select-field {
   padding: 12px;
   background: #111a28;
   border: 1px solid #223044;
@@ -77,8 +82,8 @@ body {
 }
 
 .loading {
-  width: 120px;
-  margin: 0 auto;
+  width: 140px;
+  margin: 10px auto;
   padding: 10px;
   text-align: center;
   color: #89c2ff;
@@ -89,14 +94,28 @@ body {
   display: none;
 }
 
-/* Summary and result card styling */
+.loading::after {
+  content: "⏳";
+  animation: spin 1.2s linear infinite;
+  display: inline-block;
+  margin-left: 8px;
+}
 
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ===========================
+   Summary + Cards
+=========================== */
 .summary {
   margin-top: 25px;
-  padding: 15px;
+  padding: 18px;
   background: #101722;
   border: 1px solid #1f2a38;
-  border-radius: 6px;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.25);
 }
 
 .summary h2 {
@@ -124,6 +143,7 @@ body {
 
 .cards {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin-top: 10px;
 }
@@ -132,20 +152,93 @@ body {
   flex: 1;
   background: #0e1624;
   padding: 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid #223044;
   font-size: 13px;
   color: #d8e1e8;
   white-space: pre-line;
+  transition: 0.2s ease;
+}
+
+.card:hover {
+  border-color: #58a6ff;
+  background: #121c2c;
 }
 
 .card-title {
   font-weight: bold;
   margin-bottom: 6px;
+  color: #58a6ff;
 }
 
-/* Raw result box */
+/* ===========================
+   Username Intelligence Additions
+=========================== */
 
+/* Avatar summary section */
+.card code {
+  color: #8be9fd;
+  background: #0c1423;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.card small {
+  color: #7f8fa4;
+  display: block;
+  margin-top: 4px;
+}
+
+/* Confidence progress bar */
+.confidence-bar {
+  position: relative;
+  height: 10px;
+  background: #152032;
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 6px 0 8px;
+}
+
+.confidence-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #007bff, #58a6ff);
+  transition: width 0.6s ease;
+}
+
+/* Evidence tags */
+.evidence-tag {
+  display: inline-block;
+  background: #1a2535;
+  color: #9eb9d9;
+  padding: 2px 8px;
+  border-radius: 5px;
+  font-size: 11px;
+  margin: 3px 3px 0 0;
+  border: 1px solid #223044;
+}
+
+.evidence-tag::before {
+  content: "🔍 ";
+}
+
+/* Avatar analysis cards */
+.avatar-card {
+  background: #0e1624;
+  border: 1px solid #1e2b3d;
+  border-radius: 8px;
+  padding: 10px;
+  color: #cdd9e5;
+  font-size: 13px;
+}
+
+.avatar-card b {
+  color: #58a6ff;
+}
+
+/* ===========================
+   Output Console
+=========================== */
 .results-section {
   margin-top: 25px;
 }
@@ -170,13 +263,17 @@ body {
   overflow-y: auto;
 }
 
-.loading::after {
-  content: "⏳";
-  animation: spin 1.2s linear infinite;
-  display: inline-block;
-  margin-left: 8px;
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 10px;
 }
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+::-webkit-scrollbar-track {
+  background: #0b101a;
+}
+::-webkit-scrollbar-thumb {
+  background: #28364a;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3d4d63;
 }

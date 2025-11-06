@@ -3,8 +3,12 @@ from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
 from bson import ObjectId
-import os, re, requests, traceback, whois, shodan, dns.resolver, concurrent.futures
+import os, re, json, time, requests, traceback, whois, shodan, dns.resolver, concurrent.futures, difflib, io
 from ipwhois import IPWhois
+from bs4 import BeautifulSoup
+from urllib.parse import urlparse
+from PIL import Image
+import imagehash
 
 from app.main import db
 from app.database.elastic import index_doc
@@ -98,7 +102,163 @@ def shodan_search(q):
         return {"ok": False, "error": str(e)}
 
 ############################################
-# Fast concurrent username reconnaissance
+# HTTP GET helper for OSINT scraping
+############################################
+def http_get(url, timeout=6, retries=1):
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                      "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    }
+    for attempt in range(retries + 1):
+        try:
+            r = requests.get(url, headers=headers, timeout=timeout, allow_redirects=True)
+            return r
+        except Exception:
+            if attempt == retries:
+                return None
+            time.sleep(0.5)
+    return None
+
+############################################
+# Profile Parsing and Avatar Analysis
+############################################
+def parse_profile_html(html_text):
+    soup = BeautifulSoup(html_text, "html.parser")
+    result = {"display_name": None, "bio": None, "location": None, "avatar": None, "evidence": []}
+
+    # JSON-LD
+    for script in soup.select('script[type="application/ld+json"]'):
+        try:
+            data = json.loads(script.string or "{}")
+            if isinstance(data, list):
+                data = data[0]
+            if data.get("name"):
+                result["display_name"] = data["name"]
+            if data.get("description"):
+                result["bio"] = data["description"]
+            if data.get("image"):
+                result["avatar"] = data["image"]
+        except Exception:
+            continue
+
+    # Meta
+    og_title = soup.find("meta", property="og:title") or soup.find("meta", attrs={"name":"twitter:title"})
+    if og_title and og_title.get("content"):
+        result["display_name"] = result["display_name"] or og_title["content"]
+
+    og_desc = soup.find("meta", property="og:description") or soup.find("meta", attrs={"name":"description"})
+    if og_desc and og_desc.get("content"):
+        result["bio"] = result["bio"] or og_desc["content"]
+
+    og_img = soup.find("meta", property="og:image") or soup.find("meta", attrs={"name":"twitter:image"})
+    if og_img and og_img.get("content"):
+        result["avatar"] = result["avatar"] or og_img["content"]
+
+    return result
+
+def analyze_avatar(url: str):
+    """
+    Fetch avatar, return:
+      - perceptual hash (phash)
+      - simple brightness description
+      - likely_face (bool) -> whether a human face was detected
+      - face_count (int) -> how many faces were detected (0..n)
+    This function never stores the image on disk; it only returns metadata.
+    """
+    try:
+        r = requests.get(url, timeout=5, stream=True)
+        r.raw.decode_content = True
+        img = Image.open(io.BytesIO(r.content)).convert("RGB")
+
+        # perceptual hash
+        ph = str(imagehash.phash(img))
+
+        # brightness heuristic
+        avg = img.resize((1,1)).getpixel((0,0))
+        desc = "bright image" if sum(avg)/3 > 180 else "dark image"
+
+        # face detection (non-identifying)
+        face_count = 0
+        likely_face = False
+        try:
+            import cv2
+            # convert PIL -> OpenCV image (BGR)
+            np_img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+            # load a small Haar cascade shipped with opencv
+            cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+            if cascade.empty():
+                # can't load cascade for some reason
+                face_count = 0
+            else:
+                gray = cv2.cvtColor(np_img, cv2.COLOR_BGR2GRAY)
+                faces = cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=4, minSize=(24,24))
+                face_count = int(len(faces))
+                likely_face = face_count > 0
+        except Exception:
+            # OpenCV not available or detection failed -> fallback to False
+            face_count = 0
+            likely_face = False
+
+        return {"hash": ph, "description": desc, "likely_face": likely_face, "face_count": face_count}
+    except Exception:
+        return None
+
+
+def similarity_score(a: str, b: str) -> int:
+    if not a or not b:
+        return 0
+    return int(difflib.SequenceMatcher(None, a.lower(), b.lower()).ratio() * 100)
+
+def extract_domains_from_text(text: str):
+    if not text:
+        return set()
+    import re
+    domains = set()
+    for m in re.findall(r"https?://[^\s\"'>]+", text):
+        try:
+            d = urlparse(m).netloc
+            if d:
+                domains.add(d.lower().lstrip("www."))
+        except:
+            continue
+    return domains
+
+def compute_platform_match_score(username: str, platform_entry: dict, all_platforms: dict):
+    score = 0
+    evidence = platform_entry.get("evidence", [])[:]
+    display = platform_entry.get("display_name") or ""
+    bio = platform_entry.get("bio") or ""
+    avatar = platform_entry.get("avatar")
+
+    # fuzzy match
+    sim = similarity_score(display, username)
+    if sim >= 80:
+        score += 40; evidence.append("display_name_similar")
+    elif sim >= 50:
+        score += 20; evidence.append("display_name_partial")
+
+    # avatar
+    if avatar:
+        score += 20; evidence.append("avatar_present")
+
+    # username in bio
+    if username.lower() in (display.lower() + " " + bio.lower()):
+        score += 15; evidence.append("username_in_bio")
+
+    # domain overlap
+    domains_here = extract_domains_from_text((bio or "") + " " + (platform_entry.get("url") or ""))
+    for other in all_platforms.values():
+        if other is platform_entry: continue
+        other_text = (other.get("bio") or "") + " " + (other.get("url") or "")
+        if domains_here & extract_domains_from_text(other_text):
+            score += 25; evidence.append("shared_website")
+            break
+    return {"score": min(score, 95), "evidence": list(dict.fromkeys(evidence))}
+
+############################################
+# Social Probe — Enhanced
 ############################################
 def social_probe(username):
     socials = {
@@ -108,20 +268,43 @@ def social_probe(username):
         "instagram": f"https://www.instagram.com/{username}"
     }
 
-    def check(site, url):
-        try:
-            r = requests.head(url, timeout=2, allow_redirects=True)
-            return site, {"exists": (r.status_code == 200), "status": r.status_code, "url": url}
-        except Exception as e:
-            return site, {"error": str(e)}
+    platforms = {}
+    avatar_summary = []
 
-    out = {}
-    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-        futures = [executor.submit(check, s, u) for s, u in socials.items()]
-        for future in concurrent.futures.as_completed(futures):
-            site, result = future.result()
-            out[site] = result
-    return out
+    for site, url in socials.items():
+        entry = {"exists": False, "status": None, "url": url}
+        try:
+            r = http_get(url, timeout=6, retries=1)
+            if r:
+                entry["status"] = r.status_code
+                entry["exists"] = (r.status_code == 200)
+                if r.status_code == 200:
+                    parsed = parse_profile_html(r.text)
+                    entry.update(parsed)
+                    if entry.get("avatar"):
+                        avinfo = analyze_avatar(entry["avatar"])
+                        if avinfo:
+                            entry.update(avinfo)
+                            avatar_summary.append({"platform": site, **avinfo})
+        except Exception as e:
+            entry["error"] = str(e)
+        platforms[site] = entry
+
+    # compute match scores
+    for name, entry in platforms.items():
+        ms = compute_platform_match_score(username, entry, platforms)
+        entry["match_score"] = ms["score"]
+        entry["match_evidence"] = ms["evidence"]
+
+    scores = [v["match_score"] for v in platforms.values() if v.get("exists")]
+    confidence = int(sum(scores)/len(scores)) if scores else 0
+
+    return {
+        "links_found": [k for k,v in platforms.items() if v.get("exists")],
+        "avatar_summary": avatar_summary,
+        "confidence": confidence,
+        "platforms": platforms
+    }
 
 ############################################
 # External Threat Intel APIs
@@ -181,19 +364,19 @@ def hibp_check(email):
 ############################################
 def index_scan_to_elastic(scan_id: str, scan_record: dict):
     try:
-        doc = {
+        safe_doc = {
             "query": scan_record.get("query"),
             "source": scan_record.get("source"),
             "status": scan_record.get("status"),
-            "results": scan_record.get("results"),
             "created_at": scan_record.get("created_at").isoformat() if scan_record.get("created_at") else None,
             "updated_at": datetime.utcnow().isoformat(),
-            "raw": scan_record
+            "results": json.loads(json.dumps(scan_record.get("results"), default=str)),
+            "raw": json.loads(json.dumps(scan_record, default=str))
         }
-        index_doc(SCAN_INDEX, doc, doc_id=scan_id)
-        print(f"Indexed scan {scan_id} into Elasticsearch.")
+        index_doc(SCAN_INDEX, safe_doc, doc_id=scan_id)
+        print(f"[+] Indexed scan {scan_id} into Elasticsearch.")
     except Exception as e:
-        print(f"Failed to index scan {scan_id} in Elasticsearch: {e}")
+        print(f"[!] Failed to index scan {scan_id}: {e}")
 
 ############################################
 # Background Scan Worker
@@ -222,14 +405,11 @@ def run_scan(id):
                 }
                 for k, f in futures.items():
                     res[k] = f.result()
-
             vt_score = res.get("vt", {}).get("data", {}).get("data", {}).get("attributes", {}).get("last_analysis_stats", {}).get("malicious", 0)
             abuse_score = res.get("abuseipdb", {}).get("data", {}).get("abuseConfidenceScore", 0)
-
             level = "low"
             if vt_score >= 3 or abuse_score >= 30: level = "medium"
             if vt_score >= 10 or abuse_score >= 75: level = "high"
-
             res["threat_score"] = {"vt_malicious": vt_score, "abuse_confidence": abuse_score, "risk_level": level}
 
         elif etype == "private_ip":
@@ -257,22 +437,21 @@ def run_scan(id):
             res["MX"] = safe_dns(domain, "MX")
             res["gravatar"] = email_gravatar(q)
             res["hibp"] = hibp_check(q)
+            res["threat_score"] = {"risk_level": "low"}
 
         elif etype == "phone":
             res["note"] = "Phone OSINT requires external paid data source."
 
         elif etype == "username":
-            res["social"] = social_probe(q)
+            profile = social_probe(q)
+            res["social_profile"] = profile
+            res["social"] = profile.get("platforms", {})
+            res["threat_score"] = {"risk_level": "low", "confidence": profile.get("confidence", 0)}
 
         else:
             res["note"] = "Unknown input. Try domain/ip/email/username/phone."
 
-        db.search_logs.update_one(
-            {"_id": oid},
-            {"$set": {"status": "done", "results": res, "updated_at": datetime.utcnow()}}
-        )
-
-        # Fetch updated record and index it to Elasticsearch
+        db.search_logs.update_one({"_id": oid}, {"$set": {"status": "done", "results": res, "updated_at": datetime.utcnow()}})
         updated_doc = db.search_logs.find_one({"_id": oid})
         index_scan_to_elastic(str(oid), updated_doc)
 

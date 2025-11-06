@@ -1,5 +1,6 @@
 # app/database/es_mapping.py
-SCAN_INDEX = "shadowtrace_scans"
+SCAN_INDEX = "shadowtrace-osint-scans-v2"
+
 
 # Example mapping - adjust fields as you store them in MongoDB
 MAPPING = {

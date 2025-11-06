@@ -1,51 +1,76 @@
 import os
-from dotenv import load_dotenv
+import json
+from datetime import datetime
+from elasticsearch import Elasticsearch
+from app.config import (
+    ELASTIC_URL, ELASTIC_USERNAME, ELASTIC_PASSWORD, ELASTIC_VERIFY_SSL
+)
 
-# Load environment variables from .env
-load_dotenv()
+#  Initialize Elasticsearch client using config variables
+def get_elasticsearch_client():
+    if not ELASTIC_URL:
+        print("[!] Elasticsearch not configured. Skipping indexing.")
+        return None
 
-# General app config
-PORT = os.getenv("PORT", 8000)
-APP_ENV = os.getenv("APP_ENV", "development")
+    try:
+        es = Elasticsearch(
+            [ELASTIC_URL],
+            basic_auth=(ELASTIC_USERNAME, ELASTIC_PASSWORD) if ELASTIC_USERNAME else None,
+            verify_certs=ELASTIC_VERIFY_SSL,
+        )
+        if es.ping():
+            print("[+] Connected to Elasticsearch successfully.")
+        else:
+            print("[!] Elasticsearch connection failed.")
+        return es
+    except Exception as e:
+        print(f"[!] Error initializing Elasticsearch client: {e}")
+        return None
 
-# MongoDB
-MONGO_URI = os.getenv("MONGO_URI")
-MONGO_DB = os.getenv("MONGO_DB")
 
-# Elasticsearch (optional)
-ELASTIC_URL = os.getenv("ELASTIC_URL")
-ELASTIC_USERNAME = os.getenv("ELASTIC_USERNAME")
-ELASTIC_PASSWORD = os.getenv("ELASTIC_PASSWORD")
-ELASTIC_VERIFY_SSL = os.getenv("ELASTIC_VERIFY_SSL", "false").lower() == "true"
+#  Your enhanced OSINT scan runner
+def run_scan(query: str, scan_type: str):
+    """
+    Runs an OSINT scan, stores results locally,
+    and indexes them automatically into Elasticsearch.
+    """
 
-# API Keys (OSINT integrations)
-SHODAN_API_KEY = os.getenv("SHODAN_API_KEY")
-VT_API_KEY = os.getenv("VT_API_KEY")
-ABUSEIPDB_KEY = os.getenv("ABUSEIPDB_KEY")
-OTX_API_KEY = os.getenv("OTX_API_KEY")
-MAXMIND_LICENSE_KEY = os.getenv("MAXMIND_LICENSE_KEY")
-HIBP_API_KEY = os.getenv("HIBP_API_KEY")
+    # 1️ Simulate or replace this with your real OSINT scan logic
+    scan_result = {
+        "query": query,
+        "scan_type": scan_type,
+        "timestamp": datetime.utcnow().isoformat(),
+        "status": "completed",
+        "data": {
+            "sources": ["example-source1", "example-source2"],
+            "findings": [
+                {"title": "Open directory listing", "severity": "medium"},
+                {"title": "Possible exposed API key", "severity": "high"}
+            ]
+        }
+    }
 
-# Threat Feeds
-DARK_FEEDS = os.getenv("DARK_FEEDS", "").split(",")
+    # 2️ Save result locally
+    os.makedirs("scans", exist_ok=True)
+    filename = f"scans/{query}_{scan_type}.json"
+    with open(filename, "w") as f:
+        json.dump(scan_result, f, indent=2)
+    print(f"[+] Saved scan result locally at: {filename}")
 
-# SMTP (email alerts)
-SMTP_HOST = os.getenv("SMTP_HOST")
-SMTP_PORT = os.getenv("SMTP_PORT")
-SMTP_USERNAME = os.getenv("SMTP_USERNAME")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
-ALERT_EMAIL_FROM = os.getenv("ALERT_EMAIL_FROM")
-ALERT_EMAIL_TO = os.getenv("ALERT_EMAIL_TO")
+    # 3️ Index to Elasticsearch (if configured)
+    es = get_elasticsearch_client()
+    if es:
+        try:
+            index_name = "osint-scans"
+            es.index(index=index_name, document=scan_result)
+            print(f"[+] Indexed scan result for {query} into '{index_name}'.")
+        except Exception as e:
+            print(f"[!] Failed to index scan into Elasticsearch: {e}")
 
-# Redis / Celery
-REDIS_URL = os.getenv("REDIS_URL")
-CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
-RESULT_BACKEND = os.getenv("RESULT_BACKEND")
-
-# Monitoring / Webhooks
-SENTRY_DSN = os.getenv("SENTRY_DSN")
-ALERT_WEBHOOK_URL = os.getenv("ALERT_WEBHOOK_URL")
-
-# Security
-JWT_SECRET = os.getenv("JWT_SECRET")
-ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
+    # 4️  Return for API or frontend
+    return {
+        "query": query,
+        "scan_type": scan_type,
+        "indexed": bool(es),
+        "timestamp": scan_result["timestamp"]
+    }

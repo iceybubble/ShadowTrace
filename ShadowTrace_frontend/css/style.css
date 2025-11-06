@@ -169,3 +169,14 @@ body {
   white-space: pre-wrap;
   overflow-y: auto;
 }
+
+.loading::after {
+  content: "⏳";
+  animation: spin 1.2s linear infinite;
+  display: inline-block;
+  margin-left: 8px;
+}
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

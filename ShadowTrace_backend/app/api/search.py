@@ -5,7 +5,10 @@ from datetime import datetime
 from bson import ObjectId
 import os, re, requests, traceback, whois, shodan, dns.resolver, concurrent.futures
 from ipwhois import IPWhois
+
 from app.main import db
+from app.database.elastic import index_doc
+from app.database.es_mapping import SCAN_INDEX
 
 router = APIRouter(prefix="/search", tags=["search"])
 
@@ -159,7 +162,6 @@ def abuseipdb_check(ip):
         return {"ok": False, "error": str(e)}
 
 def hibp_check(email):
-    """Checks if an email appears in HIBP breaches (test key supported)."""
     try:
         encoded = requests.utils.quote(email)
         url = f"https://haveibeenpwned.com/api/v3/breachedaccount/{encoded}?truncateResponse=false"
@@ -175,13 +177,33 @@ def hibp_check(email):
         return {"ok": False, "error": str(e)}
 
 ############################################
+# Elasticsearch Integration
+############################################
+def index_scan_to_elastic(scan_id: str, scan_record: dict):
+    try:
+        doc = {
+            "query": scan_record.get("query"),
+            "source": scan_record.get("source"),
+            "status": scan_record.get("status"),
+            "results": scan_record.get("results"),
+            "created_at": scan_record.get("created_at").isoformat() if scan_record.get("created_at") else None,
+            "updated_at": datetime.utcnow().isoformat(),
+            "raw": scan_record
+        }
+        index_doc(SCAN_INDEX, doc, doc_id=scan_id)
+        print(f"Indexed scan {scan_id} into Elasticsearch.")
+    except Exception as e:
+        print(f"Failed to index scan {scan_id} in Elasticsearch: {e}")
+
+############################################
 # Background Scan Worker
 ############################################
 def run_scan(id):
     try:
         oid = ObjectId(id)
         doc = db.search_logs.find_one({"_id": oid})
-        if not doc: return
+        if not doc:
+            return
 
         q = doc["query"].strip()
         etype = detect_entity(q)
@@ -189,7 +211,6 @@ def run_scan(id):
 
         res = {"meta": {"query": q, "entity": etype, "time": str(datetime.utcnow())}}
 
-        # Run entity-specific intelligence
         if etype == "ip":
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 futures = {
@@ -246,7 +267,15 @@ def run_scan(id):
         else:
             res["note"] = "Unknown input. Try domain/ip/email/username/phone."
 
-        db.search_logs.update_one({"_id": oid}, {"$set": {"status": "done", "results": res, "updated_at": datetime.utcnow()}})
+        db.search_logs.update_one(
+            {"_id": oid},
+            {"$set": {"status": "done", "results": res, "updated_at": datetime.utcnow()}}
+        )
+
+        # Fetch updated record and index it to Elasticsearch
+        updated_doc = db.search_logs.find_one({"_id": oid})
+        index_scan_to_elastic(str(oid), updated_doc)
+
     except Exception:
         tb = traceback.format_exc()
         db.search_logs.update_one({"_id": ObjectId(id)}, {"$set": {"status": "failed", "error": tb}})

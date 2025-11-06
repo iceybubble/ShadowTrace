@@ -1,69 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from pymongo import MongoClient
 from dotenv import load_dotenv
-import certifi, ssl, os
+import os
 
-# Load environment variables (.env file)
-load_dotenv()
+# ------------------ Load .env ------------------
+load_dotenv()  # Loads from project root: D:\ShadowTrace\.env
 
-# ------------------ MongoDB Connection ------------------
-MONGO_URI = os.getenv("MONGO_URI")
-db = None
+# ------------------ Import DB from database/mongo.py ------------------
+from app.database.mongo import db, db_status, scans_collection
 
-def connect_mongo():
-    """Attempts TLS-secure connection, falls back to relaxed SSL if needed."""
-    global db
-
-    if not MONGO_URI:
-        print("[!] MONGO_URI not found in .env")
-        return
-
-    # Create secure SSL context (forces TLS 1.2+)
-    ssl_ctx = ssl.create_default_context(cafile=certifi.where())
-    ssl_ctx.minimum_version = ssl.TLSVersion.TLSv1_2
-
-    try:
-        # First, attempt a strict TLS connection
-        client = MongoClient(
-            MONGO_URI,
-            tls=True,
-            tlsCAFile=certifi.where(),
-            tlsAllowInvalidCertificates=False,
-            ssl=True,
-            ssl_cert_reqs=ssl.CERT_REQUIRED,
-            ssl_match_hostname=True,
-            serverSelectionTimeoutMS=8000,
-            ssl_context=ssl_ctx
-        )
-        client.admin.command("ping")
-        db = client["shadowtrace"]
-        print("[+] MongoDB Atlas connected successfully via secure TLS")
-    except Exception as e:
-        print("[!] Secure TLS connection failed, retrying with relaxed SSL...")
-        print("    Error:", e)
-        try:
-            # Retry with relaxed verification
-            client = MongoClient(
-                MONGO_URI,
-                tls=True,
-                tlsCAFile=certifi.where(),
-                tlsAllowInvalidCertificates=True,
-                ssl=True,
-                ssl_cert_reqs=ssl.CERT_NONE,
-                ssl_match_hostname=False,
-                serverSelectionTimeoutMS=8000
-            )
-            client.admin.command("ping")
-            db = client["shadowtrace"]
-            print("[+] MongoDB connected (TLS verification bypassed for development)")
-        except Exception as err:
-            print("[!] MongoDB connection failed completely:", err)
-            db = None
-
-# Run connection on startup
-connect_mongo()
 
 # ------------------ Router Imports ------------------
 from app.api.search import router as search_router
@@ -78,10 +24,10 @@ app = FastAPI(
     version="1.0"
 )
 
-# Allow all origins (safe for local development)
+# CORS for frontend (adjust in production)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Change to your frontend URL in prod
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -100,6 +46,7 @@ async def root():
         "message": "ShadowTrace Backend Running",
         "status": "online",
         "version": "1.0",
+        "db": db_status,
         "endpoints": {
             "start_scan": "/search/start",
             "get_scan": "/search/status/{query_id}",
@@ -110,13 +57,26 @@ async def root():
         }
     }
 
-# ------------------ Database Connectivity Test ------------------
-@app.get("/db-test")
-async def db_test():
+# ------------------ Health Check ------------------
+@app.get("/health")
+async def health():
     if not db:
-        return {"db_status": "failed", "error": "Database not connected"}
+        return {"status": "error", "db": db_status}
+
     try:
         db.command("ping")
-        return {"db_status": "connected", "db_name": "shadowtrace"}
+        return {
+            "status": "healthy",
+            "db": {"name": db.name, "status": "connected"},
+            "collections": db.list_collection_names()[:5]  # First 5
+        }
     except Exception as e:
-        return {"db_status": "failed", "error": str(e)}
+        return {"status": "error", "db": {"status": "failed", "error": str(e)}}
+
+# ------------------ Startup Event (Optional) ------------------
+@app.on_event("startup")
+async def startup_event():
+    if db_status["db_status"] == "connected":
+        print(f"Database '{db.name}' is ready.")
+    else:
+        print(f"Database connection failed: {db_status.get('error')}")

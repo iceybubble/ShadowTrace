@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import urlparse
 from PIL import Image
 import imagehash
+import numpy as np 
 
 from app.main import db
 from app.database.elastic import index_doc

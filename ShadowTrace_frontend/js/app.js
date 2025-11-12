@@ -4,11 +4,15 @@ const statusBox = document.getElementById("status-box");
 const startBtn = document.getElementById("start");
 const loading = document.getElementById("loading");
 
+// ===== SpiderFoot iframe reference =====
+const spiderFootFrame = document.getElementById("spiderfoot-frame");
+const spiderFootSection = document.getElementById("spiderfoot-section");
+
 function show(msg) {
   statusBox.textContent = msg;
 }
 
-async function pollStatus(id) {
+async function pollStatus(id, query) {
   loading.classList.remove("hidden");
   show("Running scan...");
   const interval = 2500;
@@ -21,13 +25,29 @@ async function pollStatus(id) {
     if (data.status === "done" && data.results) {
       renderDashboard(data.results);
       loading.classList.add("hidden");
+
+      // ✅ Reveal SpiderFoot after scan completes
+      if (spiderFootFrame && spiderFootSection) {
+        const spiderUrl = `${API_BASE}/spiderfoot?target=${encodeURIComponent(query)}`;
+        spiderFootFrame.src = spiderUrl;
+        spiderFootFrame.classList.remove("hidden");
+        spiderFootSection.classList.remove("hidden");
+
+        // Smoothly scroll to SpiderFoot dashboard
+        setTimeout(() => {
+          spiderFootSection.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 600);
+      }
+
       break;
     }
+
     if (data.status === "failed") {
       show("❌ Scan failed:\n" + data.error);
       loading.classList.add("hidden");
       break;
     }
+
     await new Promise(r => setTimeout(r, interval));
   }
 }
@@ -54,9 +74,11 @@ function renderSummary(res) {
   const vtStats = res.vt?.data?.data?.attributes?.last_analysis_stats || {};
   document.getElementById("vt-card").textContent =
     `VirusTotal\nMalicious: ${vtStats.malicious || 0}`;
+
   const abuse = res.abuseipdb?.data || {};
   document.getElementById("abuse-card").textContent =
     `AbuseIPDB\nConfidence: ${abuse.abuseConfidenceScore || 0}`;
+
   const shodan = res.shodan?.host || {};
   document.getElementById("shodan-card").textContent =
     `Shodan\nOpen Ports: ${shodan.ports ? shodan.ports.join(", ") : "None"}`;
@@ -137,7 +159,7 @@ function renderEmail(res) {
   document.querySelector(".container").appendChild(div);
 }
 
-// =============== Username OSINT (Enhanced) ===============
+// =============== Username Intelligence ===============
 function renderUsername(res) {
   const social = res.social_profile || res.social;
   if (!social) return;
@@ -152,7 +174,6 @@ function renderUsername(res) {
       <div class="confidence-fill" style="width:${social.confidence || 0}%"></div>
     </div>`;
 
-  // Avatar Analysis Section
   if (social.avatar_summary?.length) {
     div.innerHTML += `<h3>Avatar Analysis</h3><div class="cards">`;
     social.avatar_summary.forEach(a => {
@@ -170,7 +191,6 @@ function renderUsername(res) {
     div.innerHTML += `</div>`;
   }
 
-  // Platform Cards
   div.innerHTML += `<h3>Platform Correlation</h3><div class="cards">`;
 
   for (const [platform, info] of Object.entries(social.platforms || {})) {
@@ -203,7 +223,13 @@ startBtn.addEventListener("click", async () => {
   const source = document.getElementById("source").value;
   if (!query) return alert("Enter a query");
 
+  // Reset sections
   document.querySelectorAll(".summary").forEach(e => e.classList.add("hidden"));
+  if (spiderFootFrame && spiderFootSection) {
+    spiderFootFrame.classList.add("hidden");
+    spiderFootSection.classList.add("hidden");
+  }
+
   loading.classList.remove("hidden");
   show("Submitting scan request...");
 
@@ -215,5 +241,5 @@ startBtn.addEventListener("click", async () => {
 
   const data = await res.json();
   show("Scan queued:\n" + JSON.stringify(data, null, 2));
-  pollStatus(data.id);
+  pollStatus(data.id, query);
 });

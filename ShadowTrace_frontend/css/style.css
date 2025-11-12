@@ -11,6 +11,9 @@ body {
   overflow-y: scroll;
 }
 
+/* ===========================
+   Navbar
+=========================== */
 .navbar {
   background: #0e1624;
   padding: 15px 30px;
@@ -81,6 +84,9 @@ body {
   background: #0b8bff;
 }
 
+/* ===========================
+   Loading Animation
+=========================== */
 .loading {
   width: 140px;
   margin: 10px auto;
@@ -175,7 +181,6 @@ body {
    Username Intelligence Additions
 =========================== */
 
-/* Avatar summary section */
 .card code {
   color: #8be9fd;
   background: #0c1423;
@@ -190,7 +195,6 @@ body {
   margin-top: 4px;
 }
 
-/* Confidence progress bar */
 .confidence-bar {
   position: relative;
   height: 10px;
@@ -206,7 +210,6 @@ body {
   transition: width 0.6s ease;
 }
 
-/* Evidence tags */
 .evidence-tag {
   display: inline-block;
   background: #1a2535;
@@ -222,7 +225,6 @@ body {
   content: "🔍 ";
 }
 
-/* Avatar analysis cards */
 .avatar-card {
   background: #0e1624;
   border: 1px solid #1e2b3d;
@@ -237,15 +239,20 @@ body {
 }
 
 /* ===========================
-   Output Console
+   Output Console + SpiderFoot
 =========================== */
 .results-section {
-  margin-top: 25px;
+  margin-top: 40px;
+  padding: 18px;
+  background: #101722;
+  border: 1px solid #1f2a38;
+  border-radius: 10px;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
 }
 
 .results-section h2 {
   font-size: 18px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   color: #b7c4d1;
   border-left: 3px solid #58a6ff;
   padding-left: 10px;
@@ -263,6 +270,22 @@ body {
   overflow-y: auto;
 }
 
+/* SpiderFoot iframe styling */
+#spiderfoot-frame {
+  width: 100%;
+  height: 700px;
+  border: none;
+  border-radius: 10px;
+  background: #0c111b;
+  margin-top: 20px;
+  box-shadow: 0 0 25px rgba(0, 0, 0, 0.4);
+  transition: transform 0.2s ease;
+}
+
+#spiderfoot-frame:hover {
+  transform: scale(1.002);
+}
+
 /* Scrollbar Styling */
 ::-webkit-scrollbar {
   width: 10px;
@@ -276,4 +299,13 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #3d4d63;
+}
+/* Smooth reveal for SpiderFoot iframe */
+#spiderfoot-section {
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+
+#spiderfoot-section:not(.hidden) {
+  opacity: 1;
 }

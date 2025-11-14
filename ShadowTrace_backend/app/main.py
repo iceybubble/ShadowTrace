@@ -42,7 +42,8 @@ from app.api.search import router as search_router
 from app.api.alerts import router as alerts_router
 from app.api.history import router as history_router
 from app.api.utils import router as utils_router
-from routers import osint
+from app.routers import osint
+
 
 # ------------------ FastAPI App Setup ------------------
 app = FastAPI(

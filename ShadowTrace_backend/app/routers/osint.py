@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
-from services.spiderfoot_client import SpiderFootClient
+from app.services.spiderfoot_client import SpiderFootClient
 
 router = APIRouter(prefix="/osint", tags=["OSINT"])
 

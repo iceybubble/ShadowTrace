@@ -1,0 +1,42 @@
+<!DOCTYPE html>                           <!-- Line 1 -->
+<html lang="en">                          <!-- Line 2 -->
+<head>                                     <!-- Line 3 -->
+    <meta charset="UTF-8">                <!-- Line 4 -->
+    <title>ShadowTrace Cases</title>      <!-- Line 5 -->
+    <link rel="stylesheet" href="../css/style.css"> <!-- Line 6 -->
+</head>                                    <!-- Line 7 -->
+
+<body>                                     <!-- Line 8 -->
+
+<h2>Case Management Dashboard</h2>         <!-- Line 9 -->
+
+<button onclick="loadCases()">Load Cases</button>    <!-- Line 10 -->
+
+<br><br>                                   <!-- Line 11 -->
+
+<!-- ============================= -->
+<!-- Cases Table                   -->
+<!-- ============================= -->
+<table border="1" id="caseTable">          <!-- Line 15 -->
+    <thead>                                <!-- Line 16 -->
+        <tr>                               <!-- Line 17 -->
+            <th>Case ID</th>               <!-- Line 18 -->
+            <th>Scan ID</th>               <!-- Line 19 -->
+            <th>Entity Count</th>          <!-- Line 20 -->
+            <th>Action</th>                <!-- Line 21 -->
+        </tr>                              <!-- Line 22 -->
+    </thead>                               <!-- Line 23 -->
+    <tbody id="caseTableBody"></tbody>     <!-- Line 24 -->
+</table>                                   <!-- Line 25 -->
+
+<br><br>                                   <!-- Line 26 -->
+
+<!-- ============================= -->
+<!-- Case Details (when clicked)  -->
+<!-- ============================= -->
+<h2>Case Details</h2>                      <!-- Line 30 -->
+<pre id="caseDetails"></pre>               <!-- Line 31 -->
+
+<script src="../js/main.js"></script>      <!-- Line 32 -->
+</body>                                    <!-- Line 33 -->
+</html>                                    <!-- Line 34 -->

@@ -1,20 +1,59 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Scan Results</title>
-    <link rel="stylesheet" href="../css/style.css">
-</head>
-<body>
+<!DOCTYPE html>                        <!-- Line 1 -->
+<html lang="en">                       <!-- Line 2 -->
+<head>                                  <!-- Line 3 -->
+    <meta charset="UTF-8">             <!-- Line 4 -->
+    <title>SpiderFoot Scan Results</title> <!-- Line 5 -->
+    <link rel="stylesheet" href="../css/style.css"> <!-- Line 6 -->
+</head>                                 <!-- Line 7 -->
 
-<h2>Scan Results</h2>
+<body>                                  <!-- Line 8 -->
 
-<label>Scan ID:</label>
-<input id="scanIdInput">
-<button onclick="fetchResults()">Get Results</button>
+<h2>SpiderFoot Scan Results</h2>         <!-- Line 9 -->
 
-<pre id="resultsBox"></pre>
+<!-- ============================= -->
+<!-- Scan ID Input Section         -->
+<!-- ============================= -->
+<label>Enter Scan ID:</label>           <!-- Line 13 -->
+<input id="scanIdInput">                <!-- Line 14 -->
 
-<script src="../js/main.js"></script>
-</body>
-</html>
+<br><br>                                <!-- Line 15 -->
+
+<!-- ============================= -->
+<!-- Buttons                      -->
+<!-- ============================= -->
+<button onclick="checkStatus()">Check Status</button>      <!-- Line 19 -->
+<button onclick="fetchResults()">Fetch Results</button>     <!-- Line 20 -->
+
+<br><br>                                <!-- Line 21 -->
+
+<!-- ============================= -->
+<!-- Status Output                -->
+<!-- ============================= -->
+<h3>Status:</h3>                        <!-- Line 25 -->
+<pre id="statusBox"></pre>              <!-- Line 26 -->
+
+<!-- ============================= -->
+<!-- Results Output               -->
+<!-- ============================= -->
+<h3>Scan Results (Raw):</h3>            <!-- Line 30 -->
+<pre id="resultsBox"></pre>             <!-- Line 31 -->
+
+<br><br>                                <!-- Line 32 -->
+
+<!-- ============================= -->
+<!-- Store in MongoDB Section     -->
+<!-- ============================= -->
+<h3>Store Results in MongoDB</h3>       <!-- Line 36 -->
+<label>Case ID:</label>                 <!-- Line 37 -->
+<input id="caseStoreInput">             <!-- Line 38 -->
+
+<button onclick="storeResults()">Store</button>   <!-- Line 39 -->
+
+<br><br>                                <!-- Line 40 -->
+
+<pre id="storeBox"></pre>               <!-- Line 43 -->
+
+<script src="../js/main.js"></script>   <!-- Line 45 -->
+
+</body>                                 <!-- Line 46 -->
+</html>                                 <!-- Line 47 -->

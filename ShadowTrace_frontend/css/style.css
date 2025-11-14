@@ -1,36 +1,205 @@
+/* ==========================================================
+   SHADOWTRACE DARK MODE THEME (Cyber-OSINT UI)
+   ========================================================== */
+
+/* ------------------------------
+   GLOBAL PAGE STYLE
+   ------------------------------ */
 body {
-    font-family: Arial, sans-serif;
-    background: #f4f4f4;
-    padding: 20px;
+    font-family: "Segoe UI", Roboto, Arial, sans-serif;
+    background: #0c0f16;  /* deep dark blue */
+    margin: 0;
+    padding: 0;
+    color: #e6e6e6;
 }
 
+/* Centered Card Container */
+.container {
+    max-width: 900px;
+    margin: 40px auto;
+    background: #131721;   /* subtle bluish black */
+    padding: 30px 40px;
+    border-radius: 12px;
+    box-shadow: 0 4px 25px rgba(0,0,0,0.7);
+    border: 1px solid #1f2633;
+}
+
+/* ------------------------------
+   NAVIGATION BAR
+   ------------------------------ */
 nav {
-    background: black;
-    padding: 15px;
-    color: white;
+    background: linear-gradient(90deg, #000000, #0f172a, #000000);
+    padding: 25px;
+    color: #8ab4ff;
+    border-bottom: 2px solid #1f4068;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+nav h1 {
+    font-size: 28px;
+    margin: 0 0 10px;
+    color: #e8f1ff;
+    text-shadow: 0 0 15px #3c82ff;
 }
 
 nav ul {
     list-style: none;
     display: flex;
-    gap: 20px;
+    gap: 30px;
+    margin: 0;
+    padding: 0;
 }
 
+nav ul li a {
+    color: #7da7ff;
+    text-decoration: none;
+    font-size: 16px;
+    transition: 0.3s;
+}
+
+nav ul li a:hover {
+    color: #ffffff;
+    text-shadow: 0 0 12px #4da3ff;
+}
+
+/* ------------------------------
+   HEADINGS
+   ------------------------------ */
 h2 {
-    color: #333;
+    margin-top: 0;
+    font-size: 26px;
+    color: #e6e6e6;
+    text-shadow: 0 0 12px rgba(77, 166, 255, 0.7);
 }
 
-form input {
+h3 {
+    margin-top: 25px;
+    font-size: 22px;
+    color: #bcd0ff;
+}
+
+/* ------------------------------
+   FORM FIELDS
+   ------------------------------ */
+label {
+    font-weight: bold;
+    margin-top: 10px;
     display: block;
-    padding: 8px;
-    width: 300px;
-    margin-bottom: 15px;
+    color: #9bb8ff;
 }
 
+input {
+    width: 100%;
+    padding: 12px;
+    font-size: 15px;
+    border-radius: 8px;
+    border: 1px solid #1f2633;
+    margin: 8px 0 20px;
+    background: #0f141d;
+    color: #e6e6e6;
+    outline: none;
+}
+
+input:focus {
+    border: 1px solid #3c82ff;
+    box-shadow: 0 0 8px rgba(60, 130, 255, 0.7);
+}
+
+/* ------------------------------
+   BUTTONS
+   ------------------------------ */
 button {
-    padding: 10px 20px;
-    background: dodgerblue;
+    padding: 12px 25px;
+    background: #1a73e8;
     color: white;
     border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: bold;
     cursor: pointer;
+    transition: 0.25s;
+    box-shadow: 0 0 8px rgba(26, 115, 232, 0.6);
+}
+
+button:hover {
+    background: #0b57d0;
+    box-shadow: 0 0 15px rgba(77, 166, 255, 0.9);
+}
+
+/* ------------------------------
+   TABLES
+   ------------------------------ */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    background: #1a1f2b;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+table th {
+    background: #1e3a8a;
+    color: white;
+    padding: 14px 10px;
+    text-align: left;
+    font-size: 15px;
+    border-bottom: 2px solid #152347;
+}
+
+table td {
+    padding: 12px 10px;
+    border-bottom: 1px solid #2a3142;
+    color: #c9d6ff;
+}
+
+table tr:hover {
+    background-color: #28334a;
+}
+
+/* ------------------------------
+   PRE (Results)
+   ------------------------------ */
+pre {
+    background: #0d111a;
+    padding: 18px;
+    border-radius: 8px;
+    border-left: 5px solid #3c82ff;
+    overflow-x: auto;
+    font-size: 14px;
+    color: #cfe0ff;
+    box-shadow: 0 0 12px rgba(60, 130, 255, 0.2);
+}
+
+/* ------------------------------
+   ENTITY LIST
+   ------------------------------ */
+ul {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+ul li {
+    background: #131721;
+    margin: 5px 0;
+    padding: 10px 12px;
+    border-radius: 6px;
+    border-left: 4px solid #3c82ff;
+    color: #cfe0ff;
+    box-shadow: 0 0 6px rgba(60, 130, 255, 0.25);
+}
+
+/* Card Sections */
+.section-card {
+    background: #1b2130;
+    padding: 20px;
+    margin: 25px 0;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    border: 1px solid #293345;
+}
+
+/* Spacing Utility */
+.mt-20 {
+    margin-top: 20px;
 }

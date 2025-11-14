@@ -178,3 +178,39 @@ async function viewCase(caseId) {
 // Export functions
 window.loadCases = loadCases;
 window.viewCase = viewCase;
+
+// ======================================================================
+// 8) Load Entities from Case
+// ======================================================================
+async function loadEntities() {
+    const caseId = document.getElementById("entityCaseId").value;
+
+    if (!caseId) {
+        alert("Enter a Case ID");
+        return;
+    }
+
+    try {
+        const res = await fetch(`${API_BASE}/osint/entities/${caseId}`);
+        const data = await res.json();
+
+        const div = document.getElementById("entityOutput");
+        div.innerHTML = "";
+
+        for (const [type, items] of Object.entries(data)) {
+            div.innerHTML += `
+                <h3>${type.toUpperCase()}</h3>
+                <ul>
+                    ${items.map(item => `<li>${item}</li>`).join("")}
+                </ul>
+                <hr>
+            `;
+        }
+
+    } catch (err) {
+        document.getElementById("entityOutput").innerText =
+            "Error: " + err.message;
+    }
+}
+
+window.loadEntities = loadEntities;

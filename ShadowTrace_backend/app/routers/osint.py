@@ -1,30 +1,23 @@
-from fastapi import APIRouter
+# app/routers/osint.py
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from app.services.spiderfoot_client import SpiderFootClient
+from app.services.osint_processor import store_scan_in_mongo
 
 router = APIRouter(prefix="/osint", tags=["OSINT"])
 
-class ScanRequest(BaseModel):
-    scan_name: str
-    target: str
-    use_case: str = "all"
+class StoreRequest(BaseModel):
+    case_id: str
+    scan_id: str
+    target: str = None
 
-@router.post("/start")
-def start_scan(data: ScanRequest):
-    return SpiderFootClient.start_scan(
-        scan_name=data.scan_name,
-        target=data.target,
-        use_case=data.use_case
-    )
-
-@router.get("/status/{scan_id}")
-def get_status(scan_id: str):
-    return SpiderFootClient.scan_status(scan_id)
-
-@router.get("/stop/{scan_id}")
-def stop_scan(scan_id: str):
-    return SpiderFootClient.stop_scan(scan_id)
-
-@router.get("/results/{scan_id}")
-def fetch_results(scan_id: str):
-    return SpiderFootClient.scan_results(scan_id)
+@router.post("/store")
+def store_scan(req: StoreRequest):
+    """
+    Fetch raw scan results from SpiderFoot and store normalized data into MongoDB.
+    """
+    raw = SpiderFootClient.get_scan_raw(req.scan_id)
+    if raw is None:
+        raise HTTPException(status_code=500, detail="Could not fetch scan results from SpiderFoot")
+    res = store_scan_in_mongo(case_id=req.case_id, scan_id=req.scan_id, target=req.target or "", raw=raw)
+    return {"status": "stored", **res}

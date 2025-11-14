@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Start OSINT Scan</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<h2>Start New OSINT Scan</h2>
+
+<form id="scanForm">
+    <label>Case ID:</label>
+    <input type="text" id="caseId" required>
+
+    <label>Scan Name:</label>
+    <input type="text" id="scanName" required>
+
+    <label>Target (Domain / IP / Email / Username):</label>
+    <input type="text" id="target" required>
+
+    <button type="submit">Start Scan</button>
+</form>
+
+<div id="response"></div>
+
+<script src="../js/main.js"></script>
+</body>
+</html>

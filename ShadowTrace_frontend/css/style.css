@@ -1,311 +1,36 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: "Segoe UI", Helvetica, Arial, sans-serif;
-}
-
 body {
-  background: #0a0f18;
-  color: #d8e1e8;
-  overflow-y: scroll;
+    font-family: Arial, sans-serif;
+    background: #f4f4f4;
+    padding: 20px;
 }
 
-/* ===========================
-   Navbar
-=========================== */
-.navbar {
-  background: #0e1624;
-  padding: 15px 30px;
-  display: flex;
-  justify-content: space-between;
-  border-bottom: 1px solid #1f2a38;
+nav {
+    background: black;
+    padding: 15px;
+    color: white;
 }
 
-.logo {
-  font-size: 20px;
-  font-weight: bold;
-  color: #58a6ff;
+nav ul {
+    list-style: none;
+    display: flex;
+    gap: 20px;
 }
 
-.container {
-  max-width: 1000px;
-  margin: 40px auto;
-  padding: 0 15px;
+h2 {
+    color: #333;
 }
 
-.hero-box {
-  text-align: center;
-  margin-bottom: 30px;
+form input {
+    display: block;
+    padding: 8px;
+    width: 300px;
+    margin-bottom: 15px;
 }
 
-.hero-box h1 {
-  font-size: 28px;
-  color: #58a6ff;
-  font-weight: 600;
-}
-
-.hero-box p {
-  color: #8b98a5;
-  font-size: 14px;
-}
-
-/* ===========================
-   Search Panel
-=========================== */
-.search-panel {
-  display: flex;
-  gap: 8px;
-  margin: 25px 0;
-}
-
-.input-field,
-.select-field {
-  padding: 12px;
-  background: #111a28;
-  border: 1px solid #223044;
-  color: #d8e1e8;
-  border-radius: 6px;
-  flex: 1;
-}
-
-.scan-btn {
-  padding: 12px;
-  background: #0074ff;
-  border: none;
-  border-radius: 6px;
-  color: white;
-  font-weight: 600;
-  cursor: pointer;
-  transition: 0.2s ease;
-}
-
-.scan-btn:hover {
-  background: #0b8bff;
-}
-
-/* ===========================
-   Loading Animation
-=========================== */
-.loading {
-  width: 140px;
-  margin: 10px auto;
-  padding: 10px;
-  text-align: center;
-  color: #89c2ff;
-  font-size: 14px;
-}
-
-.hidden {
-  display: none;
-}
-
-.loading::after {
-  content: "⏳";
-  animation: spin 1.2s linear infinite;
-  display: inline-block;
-  margin-left: 8px;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* ===========================
-   Summary + Cards
-=========================== */
-.summary {
-  margin-top: 25px;
-  padding: 18px;
-  background: #101722;
-  border: 1px solid #1f2a38;
-  border-radius: 10px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.25);
-}
-
-.summary h2 {
-  font-size: 18px;
-  margin-bottom: 10px;
-  color: #b7c4d1;
-  border-left: 3px solid #58a6ff;
-  padding-left: 10px;
-}
-
-.badge {
-  display: inline-block;
-  padding: 6px 12px;
-  font-size: 14px;
-  font-weight: bold;
-  border-radius: 4px;
-  margin-bottom: 12px;
-  color: white;
-}
-
-/* Threat level colors */
-.badge.low { background: #2b8a3e; }
-.badge.medium { background: #c27b00; }
-.badge.high { background: #b12b2b; }
-
-.cards {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 10px;
-}
-
-.card {
-  flex: 1;
-  background: #0e1624;
-  padding: 12px;
-  border-radius: 8px;
-  border: 1px solid #223044;
-  font-size: 13px;
-  color: #d8e1e8;
-  white-space: pre-line;
-  transition: 0.2s ease;
-}
-
-.card:hover {
-  border-color: #58a6ff;
-  background: #121c2c;
-}
-
-.card-title {
-  font-weight: bold;
-  margin-bottom: 6px;
-  color: #58a6ff;
-}
-
-/* ===========================
-   Username Intelligence Additions
-=========================== */
-
-.card code {
-  color: #8be9fd;
-  background: #0c1423;
-  padding: 2px 5px;
-  border-radius: 4px;
-  font-size: 12px;
-}
-
-.card small {
-  color: #7f8fa4;
-  display: block;
-  margin-top: 4px;
-}
-
-.confidence-bar {
-  position: relative;
-  height: 10px;
-  background: #152032;
-  border-radius: 4px;
-  overflow: hidden;
-  margin: 6px 0 8px;
-}
-
-.confidence-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #007bff, #58a6ff);
-  transition: width 0.6s ease;
-}
-
-.evidence-tag {
-  display: inline-block;
-  background: #1a2535;
-  color: #9eb9d9;
-  padding: 2px 8px;
-  border-radius: 5px;
-  font-size: 11px;
-  margin: 3px 3px 0 0;
-  border: 1px solid #223044;
-}
-
-.evidence-tag::before {
-  content: "🔍 ";
-}
-
-.avatar-card {
-  background: #0e1624;
-  border: 1px solid #1e2b3d;
-  border-radius: 8px;
-  padding: 10px;
-  color: #cdd9e5;
-  font-size: 13px;
-}
-
-.avatar-card b {
-  color: #58a6ff;
-}
-
-/* ===========================
-   Output Console + SpiderFoot
-=========================== */
-.results-section {
-  margin-top: 40px;
-  padding: 18px;
-  background: #101722;
-  border: 1px solid #1f2a38;
-  border-radius: 10px;
-  box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
-}
-
-.results-section h2 {
-  font-size: 18px;
-  margin-bottom: 12px;
-  color: #b7c4d1;
-  border-left: 3px solid #58a6ff;
-  padding-left: 10px;
-}
-
-.output-box {
-  background: #111a28;
-  padding: 18px;
-  border-radius: 6px;
-  border: 1px solid #223044;
-  min-height: 280px;
-  font-size: 13px;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  overflow-y: auto;
-}
-
-/* SpiderFoot iframe styling */
-#spiderfoot-frame {
-  width: 100%;
-  height: 700px;
-  border: none;
-  border-radius: 10px;
-  background: #0c111b;
-  margin-top: 20px;
-  box-shadow: 0 0 25px rgba(0, 0, 0, 0.4);
-  transition: transform 0.2s ease;
-}
-
-#spiderfoot-frame:hover {
-  transform: scale(1.002);
-}
-
-/* Scrollbar Styling */
-::-webkit-scrollbar {
-  width: 10px;
-}
-::-webkit-scrollbar-track {
-  background: #0b101a;
-}
-::-webkit-scrollbar-thumb {
-  background: #28364a;
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #3d4d63;
-}
-/* Smooth reveal for SpiderFoot iframe */
-#spiderfoot-section {
-  opacity: 0;
-  transition: opacity 0.6s ease;
-}
-
-#spiderfoot-section:not(.hidden) {
-  opacity: 1;
+button {
+    padding: 10px 20px;
+    background: dodgerblue;
+    color: white;
+    border: none;
+    cursor: pointer;
 }

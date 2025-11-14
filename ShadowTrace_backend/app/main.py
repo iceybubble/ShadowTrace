@@ -42,6 +42,7 @@ from app.api.search import router as search_router
 from app.api.alerts import router as alerts_router
 from app.api.history import router as history_router
 from app.api.utils import router as utils_router
+from routers import osint
 
 # ------------------ FastAPI App Setup ------------------
 app = FastAPI(
@@ -64,7 +65,7 @@ app.include_router(search_router)
 app.include_router(alerts_router)
 app.include_router(history_router)
 app.include_router(utils_router)
-
+app.include_router(osint.router)
 # ====================================================================
 #  FRONTEND (ShadowTrace + SpiderFoot Integrated UI)
 # ====================================================================

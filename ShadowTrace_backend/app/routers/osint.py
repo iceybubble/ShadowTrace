@@ -8,6 +8,59 @@ from app.database.mongo import db
 
 router = APIRouter(prefix="/osint", tags=["OSINT"])
 
+class StartScanRequest(BaseModel):
+    case_id: str
+    scan_name: str
+    target: str
+
+
+@router.post("/start")
+def start_osint_scan(req: StartScanRequest):
+    """
+    Start a SpiderFoot scan from ShadowTrace.
+    """
+
+    # Validate
+    if not req.case_id or not req.scan_name or not req.target:
+        raise HTTPException(status_code=400, detail="Missing required fields")
+
+    # Start Scan
+    scan_id = SpiderFootClient.start_scan(
+        scan_name=req.scan_name,
+        target=req.target
+    )
+
+    if not scan_id:
+        raise HTTPException(status_code=500, detail="Failed to start SpiderFoot scan")
+
+    # Save minimal record in MongoDB
+    db.osint_cases.update_one(
+        {"case_id": req.case_id},
+        {"$setOnInsert": {
+            "case_id": req.case_id,
+            "target": req.target,
+            "scans": []
+        }},
+        upsert=True
+    )
+
+    # Attach scan entry
+    db.osint_cases.update_one(
+        {"case_id": req.case_id},
+        {"$addToSet": {
+            "scans": {"scan_id": scan_id, "scan_name": req.scan_name}
+        }}
+    )
+
+    return {
+        "status": "started",
+        "case_id": req.case_id,
+        "scan_name": req.scan_name,
+        "target": req.target,
+        "scan_id": scan_id
+    }
+
+
 class StoreRequest(BaseModel):
     case_id: str
     scan_id: str
